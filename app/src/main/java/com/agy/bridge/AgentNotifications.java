@@ -126,14 +126,14 @@ public final class AgentNotifications {
         if (notifications == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationChannel progress = new NotificationChannel(
                 CHANNEL_WORKING, "Agent progress", NotificationManager.IMPORTANCE_LOW);
-        progress.setDescription("Тихий статус длительных задач Antigravity");
+        progress.setDescription("Background status for running Antigravity tasks");
         progress.setSound(null, null);
         progress.enableVibration(false);
         notifications.createNotificationChannel(progress);
 
         NotificationChannel finished = new NotificationChannel(
                 CHANNEL_FINISHED, "Agent completed", NotificationManager.IMPORTANCE_HIGH);
-        finished.setDescription("Агент закончил работу или требует внимания");
+        finished.setDescription("Agent finished task or requires user attention");
         finished.enableVibration(true);
         finished.setVibrationPattern(new long[] {0, 250, 150, 250});
         notifications.createNotificationChannel(finished);
@@ -142,7 +142,7 @@ public final class AgentNotifications {
         // Keep a separate channel: Android persists importance per channel.
         NotificationChannel inChat = new NotificationChannel(
                 CHANNEL_IN_CHAT, "Agent completed in the open chat", NotificationManager.IMPORTANCE_DEFAULT);
-        inChat.setDescription("Завершение открытого диалога: в шторке, без всплывающего баннера");
+        inChat.setDescription("Completion for active chat: tray status only");
         inChat.enableVibration(false);
         notifications.createNotificationChannel(inChat);
     }
