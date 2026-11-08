@@ -14,7 +14,7 @@
         return value.replace(/\s+/g, ' ').slice(0, 120);
       }
     } catch (_) {}
-    return 'Агент выполняет задачу';
+    return 'Agent is performing task';
   }
 
   window.__AGY_NOTIFY_SUMMARIES__ = function (updates) {
