@@ -31,6 +31,69 @@ function rpcPathFrom(url) {
   return s.slice(best).replace(/^\/+/, '') || null;
 }
 
+
+  // Data Saver 50 KB/s stream throttler
+  function isDataSaverActive() {
+    try {
+      if (typeof window !== 'undefined' && window.__AG_DATA_SAVER__ !== undefined) return !!window.__AG_DATA_SAVER__;
+      return localStorage.getItem('ag_data_saver') === 'true';
+    } catch (_) { return false; }
+  }
+
+  function throttleStream(response) {
+    if (!isDataSaverActive() || !response || !response.body || typeof ReadableStream === 'undefined') {
+      return response;
+    }
+    try {
+      var reader = response.body.getReader();
+      var maxBps = 50 * 1024; // 50 KB/s limit
+      var lastTime = Date.now();
+      var bytesSince = 0;
+
+      var stream = new ReadableStream({
+        start: function(controller) {},
+        pull: function(controller) {
+          return reader.read().then(function(result) {
+            if (result.done) {
+              controller.close();
+              return;
+            }
+            var chunk = result.value;
+            bytesSince += chunk.byteLength || 0;
+            var now = Date.now();
+            var elapsed = (now - lastTime) / 1000;
+            var expectedTime = bytesSince / maxBps;
+            var delay = Math.max(0, (expectedTime - elapsed) * 1000);
+
+            if (delay > 0) {
+              return new Promise(function(resolve) {
+                setTimeout(function() {
+                  controller.enqueue(chunk);
+                  resolve();
+                }, Math.min(delay, 1000));
+              });
+            } else {
+              controller.enqueue(chunk);
+            }
+          }).catch(function(err) {
+            controller.error(err);
+          });
+        },
+        cancel: function(reason) {
+          return reader.cancel(reason);
+        }
+      });
+
+      return new Response(stream, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers
+      });
+    } catch (e) {
+      return response;
+    }
+  }
+
 function installFetchRewrite() {
   if (global.__AG_FETCH_REWRITE__ || typeof global.fetch !== 'function') return;
   var origFetch = global.fetch.bind(global);
@@ -80,7 +143,7 @@ function installFetchRewrite() {
                 body: bodyData,
                 credentials: 'omit'
               };
-              return fetchWithStartupRetry(targetUrl, nextOpts, 30);
+              return fetchWithStartupRetry(targetUrl, nextOpts, 30).then(throttleStream);
             });
           } catch (e) { warn('fetch rewrite (Request)', e); }
         }
@@ -102,7 +165,7 @@ function installFetchRewrite() {
           }
           next.headers = headers;
 
-          return fetchWithStartupRetry(url, next, 30);
+          return fetchWithStartupRetry(url, next, 30).then(throttleStream);
         }
       }
     } catch (e) { warn('fetch rewrite', e); }
