@@ -195,10 +195,23 @@ public final class AgentNotifications {
         // Explicit seconds remain visible even when Android shows only "Сейчас".
         String completionTime = new SimpleDateFormat("HH:mm:ss", Locale.getDefault())
                 .format(new Date(detectedAt));
-        String message = "Завершено в " + completionTime + ". Открыть диалог.";
+        String lang = Locale.getDefault().getLanguage();
+        String titleSuffix;
+        String message;
+        if ("ar".equalsIgnoreCase(lang)) {
+            titleSuffix = " · اكتملت";
+            message = "تم الانتهاء في " + completionTime + ". اضغط للفتح.";
+        } else if ("ru".equalsIgnoreCase(lang)) {
+            titleSuffix = " · завершена";
+            message = "Завершено в " + completionTime + ". Открыть диалог.";
+        } else {
+            titleSuffix = " · completed";
+            message = "Completed at " + completionTime + ". Tap to open.";
+        }
+
         Notification.Builder b = builder(headsUp ? CHANNEL_FINISHED : CHANNEL_IN_CHAT)
                 .setSmallIcon(notificationIcon())
-                .setContentTitle(title(conversationId) + " · завершена")
+                .setContentTitle(title(conversationId) + titleSuffix)
                 .setContentText(message)
                 .setStyle(new Notification.BigTextStyle().bigText(message))
                 .setContentIntent(openConversation(conversationId))
