@@ -74,15 +74,10 @@ public final class AgentNotifications {
         try {
             if (update.event == AgentTaskTracker.Event.FINISHED) {
                 notifications.cancel(update.conversationId, RUNNING_ID);
-                CompletionDispatcher delivery = completionDispatcher();
-                delivery.handler.post(() -> {
-                    try {
-                        delivery.queue.enqueue(new AgentCompletionQueue.Entry(
-                                update.conversationId, detectedAt, nativeSource));
-                    } catch (IllegalStateException full) {
-                        Log.e(TAG, "Notification backlog full; retaining existing unacknowledged events", full);
-                    }
-                });
+                if (notifications != null && notifications.areNotificationsEnabled()) {
+                    notifications.notify(update.conversationId, FINISHED_ID,
+                            finished(update.conversationId, detectedAt, nativeSource, true));
+                }
             } else {
                 if (update.event == AgentTaskTracker.Event.STARTED) {
                     CompletionDispatcher delivery = completionDispatcher();
@@ -174,7 +169,7 @@ public final class AgentNotifications {
     private Notification working(AgentTaskTracker.Change event) {
         Notification.Builder b = builder(CHANNEL_WORKING)
                 .setSmallIcon(notificationIcon())
-                .setContentTitle(title(event.conversationId) + " · выполняется")
+                .setContentTitle(title(event.conversationId) + ("ar".equalsIgnoreCase(Locale.getDefault().getLanguage()) ? " · جاري التنفيذ..." : " · in progress..."))
                 .setContentText(event.stage)
                 .setStyle(new Notification.BigTextStyle().bigText(event.stage))
                 .setContentIntent(openConversation(event.conversationId))
