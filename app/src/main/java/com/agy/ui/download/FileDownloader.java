@@ -77,7 +77,7 @@ public final class FileDownloader {
     public static void requestStoragePermission(Activity activity, DownloadTask task) {
         pendingTask = task;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Toast.makeText(activity, "Требуется доступ к файлам для скачивания", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Storage permission required to download files", Toast.LENGTH_SHORT).show();
             activity.requestPermissions(new String[]{
                     Manifest.permission.WRITE_EXTERNAL_STORAGE,
                     Manifest.permission.READ_EXTERNAL_STORAGE
@@ -101,7 +101,7 @@ public final class FileDownloader {
             }
         } else {
             pendingTask = null;
-            Toast.makeText(activity, "Разрешение на доступ к файлам отклонено", Toast.LENGTH_LONG).show();
+            Toast.makeText(activity, "Storage permission denied", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -161,7 +161,7 @@ public final class FileDownloader {
                 || uri.getHost() == null || uri.getHost().isEmpty()
                 || uri.getUserInfo() != null) {
             Log.w(TAG, "refusing non-web or credential-bearing download URL");
-            Toast.makeText(activity, "Недопустимый адрес загрузки", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Invalid download URL", Toast.LENGTH_SHORT).show();
             return;
         }
         if (TrustedCoreOrigin.matches(uri, RuntimeConfig.httpsPort(activity))) {
@@ -181,7 +181,7 @@ public final class FileDownloader {
                 fileName = "download_" + System.currentTimeMillis();
             }
             request.setTitle(fileName);
-            request.setDescription("Скачивание файла");
+            request.setDescription("Downloading file");
             request.allowScanningByMediaScanner();
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
