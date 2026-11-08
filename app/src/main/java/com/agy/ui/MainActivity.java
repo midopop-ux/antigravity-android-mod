@@ -378,6 +378,7 @@ public class MainActivity extends Activity
     @Override
     protected void onPause() {
         notificationUiResumed = false;
+        visibleConversation = null;
         AgentNotifications.contextChanged();
         AgyDiagnostics.log(this, "activity", "onPause");
         activityResumed = false;
@@ -391,6 +392,9 @@ public class MainActivity extends Activity
     @Override
     protected void onStop() {
         super.onStop();
+        visibleConversation = null;
+        notificationUiResumed = false;
+        AgentNotifications.contextChanged();
         AgyDiagnostics.log(this, "activity", "onStop");
         com.agy.theme.LauncherIconSwitcher.onAppBackgrounded(this);
     }
