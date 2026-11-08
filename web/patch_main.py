@@ -49,14 +49,17 @@ def patch_main(file_path):
 
     orig_hook = hook_match.group(1)
     injected_hook = (
-        f"var [isDesktop,setIsDesktop]=(0,{react_id}.useState)(()=>{{try{{if(window.Android&&typeof window.Android.isDesktopMode==='function')return window.Android.isDesktopMode();var s=localStorage.getItem('ag_desktop_mode');return s===null?!1:s==='true'}}catch(_){{return !1}}}});"
-        f"var onDesktopToggle=(0,{react_id}.useCallback)(v=>{{setIsDesktop(v);try{{localStorage.setItem('ag_desktop_mode',String(v));if(window.Android&&typeof window.Android.setDesktopMode==='function')window.Android.setDesktopMode(v)}}catch(_){{}}}},[]);"
-        f"var [isDataSaver,setIsDataSaver]=(0,{react_id}.useState)(()=>{{try{{return localStorage.getItem('ag_data_saver')==='true'}}catch(_){{return !1}}}});"
-        f"var onDataSaverToggle=(0,{react_id}.useCallback)(v=>{{setIsDataSaver(v);try{{localStorage.setItem('ag_data_saver',String(v));window.__AG_DATA_SAVER__=v;if(window.dispatchEvent)window.dispatchEvent(new CustomEvent('agy:data-saver',{{detail:{{enabled:v}}}}))}}catch(_){{}}}},[]);"
+        f"var [isDesktop,setIsDesktop]=(0,{react_id}.useState)(()=>{{"
+        "try{if(window.Android&&typeof window.Android.isDesktopMode==='function')return window.Android.isDesktopMode();"
+        "var s=localStorage.getItem('ag_desktop_mode');return s===null?!1:s==='true'}catch(_){return !1}});"
+        f"var onDesktopToggle=(0,{react_id}.useCallback)(v=>{{"
+        "setIsDesktop(v);try{localStorage.setItem('ag_desktop_mode',String(v));"
+        "if(window.Android&&typeof window.Android.setDesktopMode==='function')window.Android.setDesktopMode(v)}catch(_){}},[]);"
         + orig_hook
     )
 
     # Detect switch and setting item components
+    # Look for setting item component used with rightElement or contrast setting
     item_comp = "v3"
     switch_comp = "dX"
     re_idx = content.find('rightElement:')
@@ -74,8 +77,6 @@ def patch_main(file_path):
         orig_theme
         + f',{react_id}.createElement({item_comp},{{label:"Desktop Mode",description:"Use desktop viewport and user agent for the workspace",'
         + f'rightElement:{react_id}.createElement({switch_comp},{{checked:isDesktop,onCheckedChange:onDesktopToggle}})}})'
-        + f',{react_id}.createElement({item_comp},{{label:"Data Saver Mode (50 KB/s)",description:"Throttle streaming and limit excessive network tool calls to preserve mobile data",'
-        + f'rightElement:{react_id}.createElement({switch_comp},{{checked:isDataSaver,onCheckedChange:onDataSaverToggle}})}})'
     )
 
     content = content.replace(orig_hook, injected_hook, 1)
