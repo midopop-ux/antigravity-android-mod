@@ -6,7 +6,7 @@ import android.webkit.WebView;
 /** WebView resume/timer/memory lifecycle, kept out of the activity. */
 public final class WebViewLifecycle {
 
-    private static final String TAG = "WebViewHost";
+    private static final String TAG = WebViewHost;
 
     private WebViewLifecycle() {
     }
@@ -27,14 +27,20 @@ public final class WebViewLifecycle {
         }
     }
 
-    /** Pauses page callbacks and timers while the host activity is not visible. */
+    /**
+     * Pauses page callbacks while the host activity is not visible.
+     * Note: We intentionally avoid webView.pauseTimers() here because Antigravity runs
+     * long-lived background agent streaming tasks; pausing global timers freezes the JavaScript
+     * event loop / SSE state stream handling and results in UI progress freezing on 'Working...'
+     * when the user returns.
+     */
     public static void pause(WebView webView) {
         if (webView == null) {
             return;
         }
         try {
             webView.onPause();
-            webView.pauseTimers();
+            // webView.pauseTimers(); -- intentionally disabled to keep agent stream live
         } catch (Exception e) {
             Log.w(TAG, "failed to pause webView", e);
         }
