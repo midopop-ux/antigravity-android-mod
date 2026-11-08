@@ -6,7 +6,7 @@ import android.webkit.WebView;
 /** WebView resume/timer/memory lifecycle, kept out of the activity. */
 public final class WebViewLifecycle {
 
-    private static final String TAG = WebViewHost;
+    private static final String TAG = "WebViewHost";
 
     private WebViewLifecycle() {
     }
