@@ -105,7 +105,7 @@ public final class AgentTaskTracker {
     }
 
     private static String sanitize(String s) {
-        if (s == null || s.trim().isEmpty()) return "Агент выполняет задачу";
+        if (s == null || s.trim().isEmpty()) return "Agent is performing task";
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < s.length() && sb.length() < 120; i++) {
             char ch = s.charAt(i);
@@ -113,6 +113,6 @@ public final class AgentTaskTracker {
             else sb.append(' ');
         }
         String result = sb.toString().trim();
-        return result.isEmpty() ? "Агент выполняет задачу" : result;
+        return result.isEmpty() ? "Agent is performing task" : result;
     }
 }

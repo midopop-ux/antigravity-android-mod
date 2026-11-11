@@ -74,15 +74,10 @@ public final class AgentNotifications {
         try {
             if (update.event == AgentTaskTracker.Event.FINISHED) {
                 notifications.cancel(update.conversationId, RUNNING_ID);
-                CompletionDispatcher delivery = completionDispatcher();
-                delivery.handler.post(() -> {
-                    try {
-                        delivery.queue.enqueue(new AgentCompletionQueue.Entry(
-                                update.conversationId, detectedAt, nativeSource));
-                    } catch (IllegalStateException full) {
-                        Log.e(TAG, "Notification backlog full; retaining existing unacknowledged events", full);
-                    }
-                });
+                if (notifications != null && notifications.areNotificationsEnabled()) {
+                    notifications.notify(update.conversationId, FINISHED_ID,
+                            finished(update.conversationId, detectedAt, nativeSource, true));
+                }
             } else {
                 if (update.event == AgentTaskTracker.Event.STARTED) {
                     CompletionDispatcher delivery = completionDispatcher();
@@ -126,14 +121,14 @@ public final class AgentNotifications {
         if (notifications == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationChannel progress = new NotificationChannel(
                 CHANNEL_WORKING, "Agent progress", NotificationManager.IMPORTANCE_LOW);
-        progress.setDescription("Тихий статус длительных задач Antigravity");
+        progress.setDescription("Background status for running Antigravity tasks");
         progress.setSound(null, null);
         progress.enableVibration(false);
         notifications.createNotificationChannel(progress);
 
         NotificationChannel finished = new NotificationChannel(
                 CHANNEL_FINISHED, "Agent completed", NotificationManager.IMPORTANCE_HIGH);
-        finished.setDescription("Агент закончил работу или требует внимания");
+        finished.setDescription("Agent finished task or requires user attention");
         finished.enableVibration(true);
         finished.setVibrationPattern(new long[] {0, 250, 150, 250});
         notifications.createNotificationChannel(finished);
@@ -142,7 +137,7 @@ public final class AgentNotifications {
         // Keep a separate channel: Android persists importance per channel.
         NotificationChannel inChat = new NotificationChannel(
                 CHANNEL_IN_CHAT, "Agent completed in the open chat", NotificationManager.IMPORTANCE_DEFAULT);
-        inChat.setDescription("Завершение открытого диалога: в шторке, без всплывающего баннера");
+        inChat.setDescription("Completion for active chat: tray status only");
         inChat.enableVibration(false);
         notifications.createNotificationChannel(inChat);
     }
@@ -174,7 +169,7 @@ public final class AgentNotifications {
     private Notification working(AgentTaskTracker.Change event) {
         Notification.Builder b = builder(CHANNEL_WORKING)
                 .setSmallIcon(notificationIcon())
-                .setContentTitle(title(event.conversationId) + " · выполняется")
+                .setContentTitle(title(event.conversationId) + ("ar".equalsIgnoreCase(Locale.getDefault().getLanguage()) ? " · جاري التنفيذ..." : " · in progress..."))
                 .setContentText(event.stage)
                 .setStyle(new Notification.BigTextStyle().bigText(event.stage))
                 .setContentIntent(openConversation(event.conversationId))
@@ -195,10 +190,23 @@ public final class AgentNotifications {
         // Explicit seconds remain visible even when Android shows only "Сейчас".
         String completionTime = new SimpleDateFormat("HH:mm:ss", Locale.getDefault())
                 .format(new Date(detectedAt));
-        String message = "Завершено в " + completionTime + ". Открыть диалог.";
+        String lang = Locale.getDefault().getLanguage();
+        String titleSuffix;
+        String message;
+        if ("ar".equalsIgnoreCase(lang)) {
+            titleSuffix = " · اكتملت";
+            message = "تم الانتهاء في " + completionTime + ". اضغط للفتح.";
+        } else if ("ru".equalsIgnoreCase(lang)) {
+            titleSuffix = " · завершена";
+            message = "Завершено в " + completionTime + ". Открыть диалог.";
+        } else {
+            titleSuffix = " · completed";
+            message = "Completed at " + completionTime + ". Tap to open.";
+        }
+
         Notification.Builder b = builder(headsUp ? CHANNEL_FINISHED : CHANNEL_IN_CHAT)
                 .setSmallIcon(notificationIcon())
-                .setContentTitle(title(conversationId) + " · завершена")
+                .setContentTitle(title(conversationId) + titleSuffix)
                 .setContentText(message)
                 .setStyle(new Notification.BigTextStyle().bigText(message))
                 .setContentIntent(openConversation(conversationId))
