@@ -28,7 +28,7 @@ permissions:
 jobs:
   build:
     name: Build Both Release Editions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout Source Code
@@ -50,12 +50,18 @@ jobs:
 
       - name: Install Android Build Tools & System Utilities
         run: |
-          for i in 1 2 3; do
-            sudo apt-get update && break || sleep 5
-          done
-          for i in 1 2 3; do
-            sudo apt-get install -y --fix-missing aapt zipalign apksigner file zip unzip gzip && break || sleep 5
-          done
+          # Use pre-installed Android SDK build-tools on GitHub Actions runner
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          if [ -n "$BUILD_TOOLS_DIR" ] && [ -f "$BUILD_TOOLS_DIR/aapt" ]; then
+            echo "[CI] Found pre-installed Android SDK build-tools at $BUILD_TOOLS_DIR"
+            echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
+            sudo ln -sf "$BUILD_TOOLS_DIR/aapt" /usr/local/bin/aapt
+            sudo ln -sf "$BUILD_TOOLS_DIR/zipalign" /usr/local/bin/zipalign
+            sudo ln -sf "$BUILD_TOOLS_DIR/apksigner" /usr/local/bin/apksigner
+          else
+            sudo apt-get update && sudo apt-get install -y aapt zipalign apksigner || true
+          fi
+          sudo apt-get install -y file zip unzip gzip || true
 
       - name: Prepare Vendor Inputs & Signing Keystore
         env:
