@@ -475,11 +475,29 @@ public class MainActivity extends Activity
 
         Intent chooserIntent = null;
 
-        // 1. Try standard intent built by Chromium WebChromeClient
+        // Support broad media & skills/documents (*.md, *.json, *.yaml, *.txt, images, audio, video)
+        // If web requests specific media, expand MIME types to also accept documentation/skill files
         if (fileChooserParams != null) {
             try {
                 Intent defaultIntent = fileChooserParams.createIntent();
                 if (defaultIntent != null) {
+                    // Check if acceptTypes are restrictive media-only; expand to include docs/skills
+                    String[] acceptTypes = fileChooserParams.getAcceptTypes();
+                    if (acceptTypes != null && acceptTypes.length > 0) {
+                        List<String> mimes = new ArrayList<>();
+                        for (String type : acceptTypes) {
+                            if (type != null && !type.trim().isEmpty()) {
+                                mimes.add(type.trim());
+                            }
+                        }
+                        // Add markdown, plain text, and json so skill.md can always be picked
+                        if (!mimes.contains("*/*")) {
+                            mimes.add("text/*");
+                            mimes.add("application/json");
+                            mimes.add("application/octet-stream");
+                        }
+                        defaultIntent.putExtra(Intent.EXTRA_MIME_TYPES, mimes.toArray(new String[0]));
+                    }
                     chooserIntent = Intent.createChooser(defaultIntent, "Select Media / Files");
                 }
             } catch (Throwable t) {

@@ -259,12 +259,22 @@ function installFetchRewrite() {
   var origFetch = global.fetch.bind(global);
 
   function fetchWithStartupRetry(u, opts, retries) {
+    var method = String((opts && opts.method) || "GET").toUpperCase();
+    var idempotent = (method === "GET" || method === "HEAD" || method === "OPTIONS");
+    var attempts = retries;
+    if (!idempotent) {
+      // For network transitions (Wi-Fi <-> mobile data or brief VPN re-handshake),
+      // allow a grace period of up to 4 retries (~2 seconds) specifically for network dropouts
+      // before giving up, while preventing excessive replay loops.
+      attempts = Math.min(retries, 4);
+    }
     return origFetch(u, opts).catch(function (err) {
-      if (retries > 0) {
+      if (attempts > 0) {
+        var delay = (!idempotent ? 400 : 120);
         return new Promise(function (resolve) {
           setTimeout(function () {
-            resolve(fetchWithStartupRetry(u, opts, retries - 1));
-          }, 120);
+            resolve(fetchWithStartupRetry(u, opts, attempts - 1));
+          }, delay);
         });
       }
       throw err;
