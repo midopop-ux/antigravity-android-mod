@@ -47,10 +47,32 @@ public final class ConnectFrameReader {
                   + ((long)(header[1] & 255) * 65536L)
                   + ((long)(header[2] & 255) * 256L)
                   + (header[3] & 255);
-        if (size > MAX_MESSAGE_BYTES) throw new IOException("Connect payload exceeds limit");
-        byte[] message = new byte[(int)size];
-        readFully(stream, message);
-        return new Frame(flags, message);
+        if (size > Integer.MAX_VALUE) throw new IOException("Connect payload size overflow");
+        if (size <= MAX_MESSAGE_BYTES) {
+            byte[] message = new byte[(int)size];
+            readFully(stream, message);
+            return new Frame(flags, message);
+        } else {
+            // For oversized frames (e.g. initial full conversation history slice > 4MB),
+            // retain up to MAX_MESSAGE_BYTES (which contains all status/header fields)
+            // and drain the remaining bytes through the stream so the connection stays synchronized.
+            byte[] message = new byte[MAX_MESSAGE_BYTES];
+            readFully(stream, message);
+            drainFully(stream, size - MAX_MESSAGE_BYTES);
+            return new Frame(flags, message);
+        }
+    }
+
+    private static void drainFully(InputStream stream, long count) throws IOException {
+        byte[] buf = new byte[8192];
+        long remaining = count;
+        while (remaining > 0) {
+            int toRead = (int) Math.min((long) buf.length, remaining);
+            int n = stream.read(buf, 0, toRead);
+            if (n < 0) throw new EOFException("Truncated Connect frame during drain");
+            if (n == 0) throw new IOException("Connect stream stalled during drain");
+            remaining -= n;
+        }
     }
 
     private static void readFully(InputStream stream, byte[] target) throws IOException {

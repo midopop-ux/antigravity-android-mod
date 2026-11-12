@@ -127,7 +127,7 @@ public final class NativeAgentStateObserver {
     }
 
     private static boolean valid(String id) {
-        return id != null && id.matches("[A-Za-z0-9_+:-]{1,128}");
+        return id != null && id.matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
     }
 
     private synchronized void watch(String id) {
@@ -228,6 +228,11 @@ public final class NativeAgentStateObserver {
                 if (!error.equals(lastError)) {
                     AgyDiagnostics.log(context, "native_observer", "stream_error=" + error);
                     lastError = error;
+                }
+                if ("CONNECT_unknown".equals(error) || "CONNECT_not_found".equals(error)) {
+                    // Trajectory does not exist in any store; drop watch to avoid spinning.
+                    unwatch(watch.id);
+                    break;
                 }
                 retries++;
             } finally {

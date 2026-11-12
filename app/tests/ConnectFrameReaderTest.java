@@ -44,7 +44,7 @@ public final class ConnectFrameReaderTest {
         error(new byte[] {0,0,0});
         error(new byte[] {0,0,0,0,2,12});
         error(new byte[] {8,0,0,0,0});
-        error(new byte[] {0,127,-1,-1,-1});
+        error(new byte[] {(byte)0,(byte)128,0,0,0}); // negative size in 4-byte signed
         System.out.println("PASS ConnectFrameReader: "+checks+" assertions");
     }
 }

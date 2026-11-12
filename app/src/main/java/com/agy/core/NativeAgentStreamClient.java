@@ -148,17 +148,44 @@ public final class NativeAgentStreamClient {
                         }
                         break;
                     }
-                    JSONObject payload = new JSONObject(
-                            new String(frame.payload, StandardCharsets.UTF_8));
-                    JSONObject update = payload.optJSONObject("update");
-                    if (update == null) continue;
-                    if (!conversationId.equals(update.optString("conversationId", ""))) {
+                    String jsonString = new String(frame.payload, StandardCharsets.UTF_8);
+                    JSONObject update = null;
+                    try {
+                        JSONObject payload = new JSONObject(jsonString);
+                        update = payload.optJSONObject("update");
+                    } catch (org.json.JSONException jsonExc) {
+                        // For oversized frames where payload was truncated at MAX_MESSAGE_BYTES,
+                        // update might be partially truncated at the tail.
+                    }
+
+                    int status = 0;
+                    boolean fullyIdle = false;
+                    String targetConv = "";
+
+                    if (update != null) {
+                        targetConv = update.optString("conversationId", "");
+                        status = parseStatus(update.opt("status"));
+                        fullyIdle = update.optBoolean("fullyIdle", false);
+                    } else {
+                        // Regex fallback on the head of the payload
+                        java.util.regex.Matcher mConv = java.util.regex.Pattern.compile("\"conversationId\"\\s*:\\s*\"([^\"]+)\"").matcher(jsonString);
+                        if (mConv.find()) targetConv = mConv.group(1);
+                        java.util.regex.Matcher mStatus = java.util.regex.Pattern.compile("\"status\"\\s*:\\s*(?:\"([^\"]+)\"|(\\d+))").matcher(jsonString);
+                        if (mStatus.find()) {
+                            String raw = mStatus.group(1) != null ? mStatus.group(1) : mStatus.group(2);
+                            status = parseStatus(raw);
+                        }
+                        java.util.regex.Matcher mIdle = java.util.regex.Pattern.compile("\"fullyIdle\"\\s*:\\s*(true|false)").matcher(jsonString);
+                        if (mIdle.find()) {
+                            fullyIdle = "true".equalsIgnoreCase(mIdle.group(1));
+                        }
+                    }
+
+                    if (!conversationId.equals(targetConv)) {
                         // Do not permit cross-conversation status injection.
                         continue;
                     }
-                    int status = parseStatus(update.opt("status"));
                     if (status != 1 && status != 2 && status != 4) continue;
-                    boolean fullyIdle = update.optBoolean("fullyIdle", false);
                     if (!listener.onState(status, fullyIdle)) break;
                 }
             }

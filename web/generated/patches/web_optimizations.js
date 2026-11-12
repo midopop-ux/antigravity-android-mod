@@ -191,12 +191,13 @@ global.__agWebOptimizations = { installed: true };
         // Authoritative sidebar completion detection:
         // Even when the user does not open the conversation or has the app in background,
         // TrajectorySummaries notifies whenever notFullyIdle toggles false!
-        if (item.notFullyIdle === true || item.isRunning === true) {
+        var isRunning = item.notFullyIdle === true || item.isRunning === true || item.status === 'CASCADE_RUN_STATUS_RUNNING';
+        if (isRunning) {
           knownRunning.add(id);
           if (typeof bridge.onAgentState === 'function') {
             bridge.onAgentState(window.__AG_NATIVE_BRIDGE_TOKEN__, id, 2, false, "Working...");
           }
-        } else if (item.notFullyIdle === false && knownRunning.has(id)) {
+        } else if (knownRunning.has(id) && (item.notFullyIdle !== true || item.status === 'CASCADE_RUN_STATUS_IDLE' || item.status === 1)) {
           knownRunning.delete(id);
           if (typeof bridge.onAgentState === 'function') {
             bridge.onAgentState(window.__AG_NATIVE_BRIDGE_TOKEN__, id, 1, true, "");
