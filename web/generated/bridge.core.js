@@ -270,11 +270,10 @@ function installFetchRewrite() {
     }
     return origFetch(u, opts).catch(function (err) {
       if (attempts > 0) {
-        var delay = (!idempotent ? 400 : 120);
         return new Promise(function (resolve) {
           setTimeout(function () {
             resolve(fetchWithStartupRetry(u, opts, attempts - 1));
-          }, delay);
+          }, 60);
         });
       }
       throw err;

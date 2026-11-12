@@ -67,38 +67,7 @@ public final class NativeAgentStateObserver {
 
     
     private void startDiskDiscovery() {
-        pool.execute(() -> {
-            while (!stopped) {
-                try {
-                    discoverRecentBrainConversations();
-                    Thread.sleep(2500);
-                } catch (InterruptedException e) {
-                    break;
-                } catch (Exception ignored) {}
-            }
-        });
-    }
-
-    private void discoverRecentBrainConversations() {
-        java.io.File brainDir = new java.io.File(context.getFilesDir(), ".gemini/antigravity-app/brain");
-        if (!brainDir.exists() || !brainDir.isDirectory()) return;
-        java.io.File[] dirs = brainDir.listFiles();
-        if (dirs == null) return;
-        long now = System.currentTimeMillis();
-        for (java.io.File d : dirs) {
-            if (!d.isDirectory()) continue;
-            String name = d.getName();
-            if (!valid(name)) continue;
-            // Check if modified in the last 15 minutes
-            if (now - d.lastModified() < 15L * 60 * 1000) {
-                if (!watches.containsKey(name)) {
-                    Long finishedAt = recentNativeFinish.get(name);
-                    if (finishedAt == null || now - finishedAt >= RECENT_NATIVE_FINISH_MS) {
-                        watch(name);
-                    }
-                }
-            }
-        }
+        // Disabled: Rely strictly on authoritative UI/Active streams to prevent background churn and lingering tasks.
     }
 
     public synchronized void start() {

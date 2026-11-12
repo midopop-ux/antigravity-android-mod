@@ -159,9 +159,11 @@ global.__agWebOptimizations = { installed: true };
 
 /**
  * Native task status bridge. Invoked from decoded StreamAgentStateUpdates,
- * not via DOM text scraping or a timer looking for "Working...".
+ * and TrajectorySummaries for background list items.
  */
 (function () {
+  var knownRunning = new Set();
+
   function compactStage(state) {
     try {
       var steps = state.trajectorySlice && state.trajectorySlice.stepsInSlice;
@@ -179,11 +181,26 @@ global.__agWebOptimizations = { installed: true };
   window.__AGY_NOTIFY_SUMMARIES__ = function (updates) {
     try {
       var bridge = window.Android;
-      if (!bridge || typeof bridge.onConversationSummary !== 'function') return;
+      if (!bridge) return;
       for (var pair of updates || []) {
-        var id = pair[0], summary = pair[1];
-        if (typeof id === 'string' && summary && typeof summary.summary === 'string') {
-          bridge.onConversationSummary(window.__AG_NATIVE_BRIDGE_TOKEN__, id, summary.summary);
+        var id = pair[0], item = pair[1];
+        if (typeof id !== 'string' || !item) continue;
+        if (typeof item.summary === 'string' && typeof bridge.onConversationSummary === 'function') {
+          bridge.onConversationSummary(window.__AG_NATIVE_BRIDGE_TOKEN__, id, item.summary);
+        }
+        // Authoritative sidebar completion detection:
+        // Even when the user does not open the conversation or has the app in background,
+        // TrajectorySummaries notifies whenever notFullyIdle toggles false!
+        if (item.notFullyIdle === true || item.isRunning === true) {
+          knownRunning.add(id);
+          if (typeof bridge.onAgentState === 'function') {
+            bridge.onAgentState(window.__AG_NATIVE_BRIDGE_TOKEN__, id, 2, false, "Working...");
+          }
+        } else if (item.notFullyIdle === false && knownRunning.has(id)) {
+          knownRunning.delete(id);
+          if (typeof bridge.onAgentState === 'function') {
+            bridge.onAgentState(window.__AG_NATIVE_BRIDGE_TOKEN__, id, 1, true, "");
+          }
         }
       }
     } catch (_) {}
@@ -196,6 +213,11 @@ global.__agWebOptimizations = { installed: true };
       if (!state || typeof state.conversationId !== 'string') return;
       // CascadeRunStatus.IDLE=1, RUNNING=2, BUSY=4.
       if (state.status !== 1 && state.status !== 2 && state.status !== 4) return;
+      if (state.status === 2 || state.status === 4) {
+        knownRunning.add(state.conversationId);
+      } else if (state.status === 1 && state.fullyIdle === true) {
+        knownRunning.delete(state.conversationId);
+      }
       window.__AGY_DIAG_AGENT_OBSERVE__?.(state);
       window.__AGY_VERIFIED_AGENT_OBSERVE__?.(state);
       bridge.onAgentState(
