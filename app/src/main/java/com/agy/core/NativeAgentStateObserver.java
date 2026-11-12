@@ -141,6 +141,11 @@ public final class NativeAgentStateObserver {
                 }
             }
         }
+        if (watches.containsKey(id)) {
+            // Cancel existing watch for the same conversation ID to prevent overlap
+            Watch old = watches.remove(id);
+            if (old != null) old.cancel();
+        }
         Watch watch = new Watch(id);
         watches.put(id, watch);
         persist();
@@ -240,8 +245,9 @@ public final class NativeAgentStateObserver {
                 client.cancel();
             }
             if (!watch.cancelled.get()) {
-                sleep(watch, Math.min(15000, 900L * (1L << Math.min(4, retries))));
-            }
+    // Backoff: max 5 s, exponential up to 2 retries (max 3600 ms)
+    sleep(watch, Math.min(5000, 900L * (1L << Math.min(2, retries))));
+}
         }
     }
 

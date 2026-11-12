@@ -103,7 +103,7 @@ public final class NativeAgentStreamClient {
         conn.setHostnameVerifier((host, session) -> "127.0.0.1".equals(host));
         conn.setInstanceFollowRedirects(false);
         conn.setConnectTimeout(4000);
-        conn.setReadTimeout(30000);
+        conn.setReadTimeout(0); // disable read timeout to keep stream alive in background
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/connect+json");
         conn.setRequestProperty("Accept", "application/connect+json");
