@@ -42,7 +42,6 @@ import com.agy.ui.webview.AgyWebChromeClient;
 import com.agy.ui.webview.DesktopModePrefs;
 import com.agy.ui.webview.WebViewHost;
 import com.agy.util.SensitiveDataRedactor;
-import com.agy.core.TokenRefresher;
 import com.agy.util.ViewParams;
 
 /**
@@ -105,7 +104,6 @@ public class MainActivity extends Activity
     private WebViewHost webViewHost;
     private SplashController splash;
     private FrameLayout rootLayout;
-    private TokenRefresher tokenRefresher;
 
     public static final String ACTION_OPEN_AGENT_CONVERSATION = "com.agy.action.OPEN_AGENT_CONVERSATION";
     public static final String EXTRA_AGENT_CONVERSATION_ID = "agy_conversation_id";
@@ -195,7 +193,6 @@ public class MainActivity extends Activity
         androidBridge.setActivity(this);
         webViewHost = new WebViewHost(this, themeManager, oauthManager, androidBridge, this);
         webViewHost.setListener(this);
-        tokenRefresher = new TokenRefresher(this);
 
         rootLayout = new FrameLayout(this);
         rootLayout.setBackgroundColor(themeManager.getBackgroundColor());

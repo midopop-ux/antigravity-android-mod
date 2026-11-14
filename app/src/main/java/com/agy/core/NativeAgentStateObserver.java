@@ -131,8 +131,7 @@ public final class NativeAgentStateObserver {
     }
 
     private synchronized void watch(String id) {
-        if (stopped || !valid(id) || watches.containsKey(id) ||
-                watches.size() >= MAX_WATCHES) return;
+        if (stopped || !valid(id) || watches.size() >= MAX_WATCHES) return;
         if (recentNativeFinish.size() > 32) {
             long now = System.currentTimeMillis();
             for (Map.Entry<String, Long> item : recentNativeFinish.entrySet()) {
@@ -141,10 +140,9 @@ public final class NativeAgentStateObserver {
                 }
             }
         }
-        if (watches.containsKey(id)) {
-            // Cancel existing watch for the same conversation ID to prevent overlap
-            Watch old = watches.remove(id);
-            if (old != null) old.cancel();
+        Watch existing = watches.get(id);
+        if (existing != null) {
+            return;
         }
         Watch watch = new Watch(id);
         watches.put(id, watch);
@@ -245,9 +243,8 @@ public final class NativeAgentStateObserver {
                 client.cancel();
             }
             if (!watch.cancelled.get()) {
-    // Backoff: max 5 s, exponential up to 2 retries (max 3600 ms)
-    sleep(watch, Math.min(5000, 900L * (1L << Math.min(2, retries))));
-}
+                sleep(watch, Math.min(15000, 900L * (1L << Math.min(4, retries))));
+            }
         }
     }
 

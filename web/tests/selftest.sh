@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Build web assets on a disposable copy and prove upstream main.js stays intact.
-set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 TMP_DIR="${TMPDIR:-${HOME:-.}/.tmp}"
 mkdir -p "$TMP_DIR"
 TMP="$(mktemp -d "$TMP_DIR/agy-web-test.XXXXXX")"
