@@ -1,11 +1,16 @@
 name: Build and Release Antigravity APKs
 
 on:
-  push:
-    tags:
-      - 'v*' 
   workflow_dispatch:
     inputs:
+      build_type:
+        description: 'Build Type (release or debug)'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
       tag_name:
         description: 'Release Tag (e.g. v2.4.1)'
         required: false
@@ -50,7 +55,6 @@ jobs:
 
       - name: Install Android Build Tools & System Utilities
         run: |
-          # Use pre-installed Android SDK build-tools on GitHub Actions runner
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* 2>/dev/null | sort -V | tail -n 1)
           if [ -n "$BUILD_TOOLS_DIR" ] && [ -f "$BUILD_TOOLS_DIR/aapt" ]; then
             echo "[CI] Found pre-installed Android SDK build-tools at $BUILD_TOOLS_DIR"
@@ -69,7 +73,6 @@ jobs:
         run: |
           mkdir -p tools
           
-          # 1. Generate debug keystore if absent
           if [ ! -f "tools/debug.keystore" ]; then
             echo "[CI] Generating debug keystore..."
             keytool -genkey -v -keystore tools/debug.keystore \
@@ -78,20 +81,17 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-          # 2. Setup Android API 28 android.jar if absent
           if [ ! -f "tools/android.jar" ]; then
             echo "[CI] Fetching android.jar (API 28)..."
             curl -fsSL -o tools/android.jar "https://github.com/Sable/android-platforms/raw/master/android-28/android.jar" || \
             curl -fsSL -o tools/android.jar "https://raw.githubusercontent.com/iBotPeaches/platform_frameworks_base/master/android-28.jar"
           fi
 
-          # 3. Setup R8 / D8 compiler jar if absent
           if [ ! -f "tools/r8.jar" ]; then
             echo "[CI] Fetching r8.jar..."
             curl -fsSL -o tools/r8.jar "https://dl.google.com/dl/android/maven2/com/android/tools/r8/8.2.42/r8-8.2.42.jar"
           fi
 
-          # 4. Handle optional external vendor archive override
           if [ -n "$VENDOR_URL" ]; then
             echo "[CI] Downloading vendor inputs from $VENDOR_URL..."
             mkdir -p vendor
@@ -100,10 +100,16 @@ jobs:
             export AGY_HOME="$PWD/vendor"
           fi
 
-
-      - name: Build Region Bypass Release APK (dist/antigravity-region-bypass.apk)
+      - name: Build Region Bypass Release APK
         run: |
-          bash build.sh --region-bypass
+          BUILD_TYPE="${{ inputs.build_type || 'release' }}"
+          if [ "$BUILD_TYPE" = "debug" ]; then
+            echo "Building Debug Edition..."
+            bash build.sh --region-bypass --dev
+          else
+            echo "Building Release Edition..."
+            bash build.sh --region-bypass
+          fi
 
       - name: Compute Cryptographic Checksums
         run: |
@@ -114,55 +120,7 @@ jobs:
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Antigravity-Region-Bypass-arm64
+          name: Antigravity-Region-Bypass-${{ inputs.build_type || 'release' }}-arm64
           path: |
             dist/antigravity-region-bypass.apk
             dist/SHA256SUMS.txt
-
-      - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
-          name: ${{ format('Antigravity for Android {0}', github.event.inputs.tag_name || github.ref_name) }}
-          draft: ${{ github.event.inputs.draft || false }}
-          prerelease: ${{ github.event.inputs.prerelease || false }}
-          make_latest: true
-          files: |
-            dist/antigravity.apk
-            dist/antigravity-region-bypass.apk
-            dist/SHA256SUMS.txt
-          body: |
-            <div align="center">
-              <h3>Antigravity for Android</h3>
-              <p>Autonomous AI Coding Environment &bull; Native Bionic Userspace &bull; ARM64</p>
-            </div>
-
-            ---
-
-            ### Packages & Artifacts
-
-            | Package | Description |
-            | :--- | :--- |
-            | **`antigravity.apk`** | Standard production release with native bionic engine (com.agy, port 45157) |
-            | **`antigravity-region-bypass.apk`** | Region bypass edition with account eligibility check bypass (com.agy, port 45157) |
-            | **`SHA256SUMS.txt`** | Cryptographic checksums for package integrity verification |
-
-            ---
-
-            ### Key Highlights in this Release
-
-            * **Built-in Web Terminal & PTY Support (PR #19):** Enabled native built-in web terminal on Android userspace via length-preserving PTY shell binary patching (`/bin/bash` -> `/bin///sh`), resilient prioritized shell fallback hierarchy (`$PREFIX/bin/bash` -> `runtime/bin/bash` -> `/system/bin/sh`), and proper `TERM=xterm-256color` / `TERMINFO` environment configuration.
-            * **AAPT Build Reliability:** Fixed `aapt` crash with `SIGABRT (134)` on Android ARM64 userspace builds by ensuring `ANDROID_DATA` environment export.
-            * **Security Hardening (Issue #6):** Completely removed hardcoded `android:debuggable="true"` from production builds, preventing unauthorized access to OAuth credentials and internal user files via `run-as`. Dev builds now isolate debuggable flags to `--dev` builds.
-            * **Media & File Picker Overhaul (Issue #8):** Replaced SAF-only document picker with universal native Android chooser. Users can now attach photos, videos, and files directly from Gallery, Google Photos, or File Managers with automatic persistent URI permissions.
-            * **OAuth & Browser Redirection Streamlined:** Completely eliminated 80ms disk polling and temporary files. Direct stdout capture and clean native browser intent dispatching without AIDL overhead or IPC deadlocks.
-            * **ARMv8.0-A CPU Architecture & SIMD Emulation:** Added transparent atomic & SIMD emulation (`liblse_compat.so`) for FEAT_LSE, FEAT_RDM, and FEAT_FCMA, resolving `FATAL ERROR: This binary was compiled with lse enabled` and `SIGILL` crashes on Snapdragon 685 (Cortex-A53 / Redmi Note 12).
-            * **Torch / Flashlight Hardware Bridge:** Integrated hardware torch control bridge and CLI utility (`torch on/off`).
-            * **Integrated Log Export & Diagnostics:** Added "Copy Logs" and "Save Logs" actions to the startup failure splash overlay for one-tap troubleshooting.
-            * **Autonomous Background Micro-Daemon (`agy-daemon`):** Background task engine with triggers for delays, intervals, file watching, and GitHub notifications.
-
-            ---
-
-            > [!NOTE]
-            > **Seamless Upgrades:** Built with the consistent embedded signing keystore. You can install this update directly over previous v2.x releases without uninstalling or losing local projects.
