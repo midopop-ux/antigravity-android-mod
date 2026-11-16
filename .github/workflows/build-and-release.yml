@@ -69,11 +69,16 @@ jobs:
 
       - name: Prepare Vendor Inputs & Signing Keystore
         env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           VENDOR_URL: ${{ inputs.vendor_url || secrets.VENDOR_DOWNLOAD_URL }}
         run: |
           mkdir -p tools
           
-          if [ ! -f "tools/debug.keystore" ]; then
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "[CI] Deploying universal release keystore from secrets..."
+            echo "$KEYSTORE_B64" | base64 -d > tools/release.keystore
+            echo "$KEYSTORE_B64" | base64 -d > tools/debug.keystore
+          else
             echo "[CI] Generating debug keystore..."
             keytool -genkey -v -keystore tools/debug.keystore \
               -storepass android -alias androiddebugkey -keypass android \
@@ -109,6 +114,29 @@ jobs:
           else
             echo "Building Release Edition..."
             bash build.sh --region-bypass
+          fi
+
+      - name: Re-sign Output APK with Universal Keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "[CI] Re-signing Antigravity APK with universal keystore..."
+            echo "$KEYSTORE_B64" | base64 -d > /tmp/universal.keystore
+            BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+            for apk in $(find dist/ -name "*.apk"); do
+              echo "Re-signing $apk..."
+              $BUILD_TOOLS_DIR/apksigner sign --ks /tmp/universal.keystore \
+                --ks-pass pass:"$KEYSTORE_PASS" \
+                --ks-key-alias "$KEY_ALIAS" \
+                --key-pass pass:"$KEY_PASS" \
+                --out "$apk.signed" "$apk"
+              mv "$apk.signed" "$apk"
+            done
+            rm -f /tmp/universal.keystore
           fi
 
       - name: Compute Cryptographic Checksums
