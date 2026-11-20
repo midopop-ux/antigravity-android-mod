@@ -39,6 +39,9 @@
             bridge.onAgentState(window.__AG_NATIVE_BRIDGE_TOKEN__, id, 2, false, "Working...");
           }
         } else if (knownRunning.has(id) && (item.notFullyIdle !== true || item.status === 'CASCADE_RUN_STATUS_IDLE' || item.status === 1)) {
+          if (window.__AGY_RETRYING_CONVS__ && window.__AGY_RETRYING_CONVS__.has(id)) {
+            return;
+          }
           knownRunning.delete(id);
           if (typeof bridge.onAgentState === 'function') {
             bridge.onAgentState(window.__AG_NATIVE_BRIDGE_TOKEN__, id, 1, true, "");
@@ -58,6 +61,11 @@
       if (state.status === 2 || state.status === 4) {
         knownRunning.add(state.conversationId);
       } else if (state.status === 1 && state.fullyIdle === true) {
+        if (window.__AGY_RETRYING_CONVS__ && window.__AGY_RETRYING_CONVS__.has(state.conversationId)) {
+          bridge.onAgentState(
+            window.__AG_NATIVE_BRIDGE_TOKEN__, state.conversationId, 2, false, "Reconnecting...");
+          return;
+        }
         knownRunning.delete(state.conversationId);
       }
       window.__AGY_DIAG_AGENT_OBSERVE__?.(state);
