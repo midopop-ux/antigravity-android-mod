@@ -42,10 +42,10 @@ def patch(s):
     new_onboard = 'path:"/onboarding",component:UJb,beforeLoad:({context:b,search:c})=>{if(typeof navigator!=="undefined"&&!navigator.onLine){aQ({to:c.redirect?.split("?")[0]||"/",search:wR,replace:!0,throw:!0})};b.hasOnboardingScreens&&b.onboardingState!==2||c.login||aQ({to:c.redirect?.split("?")[0]||"/",search:wR,replace:!0,throw:!0})}'
     s = one(s, old_onboard, new_onboard)
 
-    # 4. LsAuthService constructor: cache auth flag and restore on offline launch
+    # 4. LsAuthService constructor: optimistic cached auth on boot (instant launch online & offline)
     old_auth_init = 'this._authStateProvider=new yi({state:"uninitialized",context:Rg});this._authActor=Tg(Gfa);this._authActor.subscribe(f=>{var g=f.value,\nh=f.context;f.matches("authenticating")?(f=f.children?.authenticatingActor?.getSnapshot(),g=f?.value,this._authStateProvider.setState({state:g==="success"?"signedIn":g==="failure"?"signedOut":g,context:f?.context})):this._authStateProvider.setState({state:g,context:h})});'
     new_auth_init = (
-        'let _initAuth="uninitialized";try{if(typeof navigator!=="undefined"&&!navigator.onLine&&localStorage.getItem("ag_authenticated")==="1"){_initAuth="signedIn"}}catch(_){}'
+        'let _initAuth="uninitialized";try{if(localStorage.getItem("ag_authenticated")==="1"){_initAuth="signedIn"}}catch(_){}'
         'this._authStateProvider=new yi({state:_initAuth,context:Rg});this._authActor=Tg(Gfa);'
         'if(typeof window!=="undefined"){window.addEventListener("online",()=>{try{if(this&&!this.isLoggingOut)Yy(this,4)}catch(_){}})};'
         'this._authActor.subscribe(f=>{var g=f.value,h=f.context;'
