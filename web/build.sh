@@ -166,6 +166,9 @@ python3 "$SCRIPT_DIR/patch_sidebar_reconcile.py" "$GEN_DIR/main.js" "$GEN_DIR/ma
 # Offline cached workspace & conversation preservation:
 python3 "$SCRIPT_DIR/patch_offline_auth.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js" \
     || die "web/patch_offline_auth.py incompatible with v2.4.0"
+# Peak hour transient stream auto-retry resilience:
+python3 "$SCRIPT_DIR/patch_auto_retry.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js" \
+    || die "web/patch_auto_retry.py incompatible with v2.4.0"
 
 
 
