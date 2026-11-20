@@ -163,6 +163,9 @@ python3 "$SCRIPT_DIR/patch_runtime_v24.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js"
 # Hooks are lifecycle-safe and never mutate upstream read/unread metadata.
 python3 "$SCRIPT_DIR/patch_sidebar_reconcile.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js" \
     || die "web/patch_sidebar_reconcile.py incompatible with v2.4.0"
+# Offline cached workspace & conversation preservation:
+python3 "$SCRIPT_DIR/patch_offline_auth.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js" \
+    || die "web/patch_offline_auth.py incompatible with v2.4.0"
 
 
 
