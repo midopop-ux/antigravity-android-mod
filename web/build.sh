@@ -169,6 +169,9 @@ python3 "$SCRIPT_DIR/patch_offline_auth.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js
 # Peak hour transient stream auto-retry resilience:
 python3 "$SCRIPT_DIR/patch_auto_retry.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js" \
     || die "web/patch_auto_retry.py incompatible with v2.4.0"
+# User message bubble bidirectional (Arabic/English) text ordering:
+python3 "$SCRIPT_DIR/patch_bidi_user_bubble.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js" \
+    || die "web/patch_bidi_user_bubble.py incompatible with v2.4.0"
 
 
 
