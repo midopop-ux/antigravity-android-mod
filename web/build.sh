@@ -172,6 +172,10 @@ python3 "$SCRIPT_DIR/patch_auto_retry.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js" 
 # User message bubble bidirectional (Arabic/English) text ordering:
 python3 "$SCRIPT_DIR/patch_bidi_user_bubble.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js" \
     || die "web/patch_bidi_user_bubble.py incompatible with v2.4.0"
+# Immediate model and user status refresh on network reconnect:
+python3 "$SCRIPT_DIR/patch_online_model_refresh.py" "$GEN_DIR/main.js" "$GEN_DIR/main.js" \
+    || die "web/patch_online_model_refresh.py incompatible with v2.4.0"
+
 
 
 
