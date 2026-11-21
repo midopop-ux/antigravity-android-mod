@@ -100,9 +100,8 @@ function installBidi(doc) {
       '  direction: ltr !important;\n' +
       '  text-align: left !important;\n' +
       '}\n' +
-      '/* Ensure all paragraphs and items isolate bidi flow */\n' +
-      '.markdown p, .markdown li, .markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6,\n' +
-      '.markdown blockquote, .markdown td, .markdown th, article p, article li, .prose p, .prose li,\n' +
+      '/* Ensure all headings, paragraphs, and list items isolate bidi flow */\n' +
+      'h1, h2, h3, h4, h5, h6, p, li, blockquote, dt, dd, th, td,\n' +
       '[data-testid="user-input-step"] [data-quotable="true"] > div {\n' +
       '  unicode-bidi: isolate !important;\n' +
       '}\n';
@@ -152,7 +151,7 @@ function installBidi(doc) {
       var ce = target.isContentEditable ? target : (target.closest && target.closest('[contenteditable="true"]'));
       if (ce) {
         // Process each block paragraph inside the editor
-        var paras = ce.querySelectorAll('p, div');
+        var paras = ce.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6');
         var anyAr = false;
         if (paras.length > 0) {
           paras.forEach(function(p) {
@@ -192,11 +191,9 @@ function installBidi(doc) {
     function scanAndApply() {
       scheduled = false;
       var elements = doc.querySelectorAll(
-        '.markdown p, .markdown li, .markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6,\n' +
-        '.markdown blockquote, .markdown td, .markdown th,\n' +
-        'article p, article li, [role="article"] p, [role="article"] li,\n' +
-        '.prose p, .prose li, [data-turn-content] p,\n' +
-        '[contenteditable="true"] p,\n' +
+        'h1, h2, h3, h4, h5, h6, p, li, blockquote, dt, dd, th, td,\n' +
+        '[data-turn-content] *,\n' +
+        '[contenteditable="true"] p, [contenteditable="true"] div,\n' +
         '[data-testid="user-input-step"] [data-quotable="true"] > div'
       );
       elements.forEach(function(el) {
